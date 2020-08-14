@@ -1,0 +1,189 @@
+package com.viettel.vtpgw.monitor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+
+import com.viettel.vtpgw.model.Endpoint;
+import com.viettel.vtpgw.model.impl.DefaultService;
+import com.viettel.vtpgw.support.AsyncMapHelper;
+
+
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.json.JsonArray;
+import io.vertx.core.json.JsonObject;
+
+public abstract class EndpointMonitor<T extends DefaultService> extends AbstractVerticle {
+  protected static class SimpleEndpoint implements Endpoint {
+    private boolean first = true;
+    private String host;
+    private boolean lived = true;
+    private boolean ssl;
+
+    private String url;
+
+    public boolean activated() {
+      throw new UnsupportedOperationException();
+    }
+
+    public String authorization() {
+      throw new UnsupportedOperationException();
+    }
+
+    public String host() {
+      return host;
+    }
+
+    public void setHost(String host) {
+      this.host = host;
+    }
+
+    public boolean setLived(boolean lived) {
+      boolean changed = this.lived != lived || first;
+      this.first = false;
+      this.lived = lived;
+      return changed;
+    }
+
+    public void setUrl(String url) {
+      this.url = url;
+      ssl = url.startsWith("https://");
+    }
+
+    @Override
+    public boolean ssl() {
+      return ssl;
+    }
+
+    public String url() {
+      return url;
+    }
+  }
+
+  private static final Logger LOG = LogManager.getLogger(EndpointMonitor.class);
+
+  private static final String MAP = "repo-service";
+
+  private String node;
+  ConcurrentHashMap<String, T> services = new ConcurrentHashMap<>();
+  private long version = -1;
+
+  protected abstract void check(T service, SimpleEndpoint endpoint);
+
+  protected abstract T createService(JsonObject obj);
+
+  protected abstract String getProtocol();
+
+  private void load(JsonObject json) {
+    JsonArray array = json.getJsonArray("endpoints");
+    if (array != null) {
+      List<Endpoint> endpoints = new ArrayList<>(array.size());
+      for (int i = 0; i < array.size(); i++) {
+        JsonObject obj = array.getJsonObject(i);
+        if (obj.getInteger("status", 0) != 1)
+          continue;
+        String checkUrl = obj.getString("checkUrl");
+        if (checkUrl == null)
+          continue;
+        SimpleEndpoint endpoint = new SimpleEndpoint();
+        endpoint.setUrl(checkUrl);
+        int pos = checkUrl.indexOf("://");
+
+        if (pos > 0) {
+          String protocol = checkUrl.substring(0, pos);
+          if (getProtocol().equals(protocol)) {
+            endpoints.add(endpoint);
+          }
+        }
+      }
+      if (!endpoints.isEmpty()) {
+        T newService = createService(json);
+        newService.setName(json.getString("name"));
+        newService.setVersion(version);
+        newService.setEndpoints(endpoints.toArray(new Endpoint[endpoints.size()]));
+
+        JsonArray receivers = json.getJsonArray("alertReceivers");
+        if (receivers != null) {
+          List<String> alertReceivers = new ArrayList<String>();
+          for (Object item : receivers.getList()) {
+            if (item instanceof String) {
+              alertReceivers.add((String) item);
+            }
+          }
+          newService.setAlertReceivers(alertReceivers);
+        }
+        services.put(newService.name(), newService);
+      }
+    }
+  }
+
+  private void reload(Message<Long> msg) {
+    long newVersion = msg == null ? 0L : msg.body();
+    if (newVersion > version) {
+
+      version = newVersion;
+      vertx.sharedData().<String, JsonObject>getClusterWideMap(MAP, rs -> {
+        if (rs.succeeded()) {
+          AsyncMapHelper.getValues(vertx, rs.result(), async -> {
+            if (async.succeeded()) {
+              services.clear();
+              LOG.info("monitor services {}", async.result().size());
+              try {
+                for (JsonObject json : async.result()) {
+                  load(json);
+                }
+              } catch (Exception e) {
+                LOG.error("Can not monitor service", e);
+              }
+              // async.result().forEach(this::load);
+            } else {
+              LOG.error("Can not preload services", async.cause());
+            }
+          });
+
+        } else {
+          LOG.error("Cannot get external-services storage", rs.cause());
+        }
+      });
+    }
+
+  }
+
+  @Override
+  public void start() throws Exception {
+
+    vertx.eventBus().<Long>consumer(MAP, this::reload);
+    long checkPeriod = config().getLong("check-period");
+    LOG.info("schedule check external endpoint with period:{}", checkPeriod);
+    vertx.setPeriodic(checkPeriod, id -> {
+      try {
+        services.values().forEach(service -> {
+          for (Endpoint endpoint : service.getEndpoints()) {
+            check(service, (SimpleEndpoint) endpoint);
+          }
+
+        });
+      } catch (Exception e) {
+        LOG.debug(e);
+      }
+    });
+    reload(null);
+  }
+
+  protected boolean update(T service, SimpleEndpoint endpoint, boolean lived) {
+    vertx.eventBus().publish("endpoint-changed", new JsonObject().put("check", endpoint.url()).put("node", node)
+        .put("lived", lived).put("name", service.name()));
+    if (endpoint.setLived(lived)) {
+      if (!lived) {
+
+      }
+      return true;
+    }
+    return false;
+  }
+}

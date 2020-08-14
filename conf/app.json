@@ -1,0 +1,156 @@
+{
+  "node": "01",
+  "gateway": 
+  {
+	  "app-code": "VTP",
+      "port": 8686    
+  },
+  "jedis-cluster": {
+    "host": 
+	[
+      "10.60.155.107:7000",
+      "10.60.155.107:7001",
+      "10.60.155.107:7002",
+      "10.60.155.108:7003",
+      "10.60.155.108:7004",
+      "10.60.155.108:7005"
+    ]
+  },
+  
+  "proxy": {
+    "lb-address": "10.58.71.187:8686",
+    "vtpgateway": "10.58.71.187:8686"
+  },
+  
+  "monitor": 
+  {
+    "config": 
+    {
+      "check-period": 5000,
+      "connect-timeout": 1000,
+      "idle-timeout": 1000
+    }
+  },
+  "metrics": {
+    "mode":"dev",
+    "timeout": 10000,
+    "schema": {
+      "template": "vtpgw-*",
+      "mappings": {
+        "server":{
+          "properties":{
+            "@name":{
+              "type": "string",
+                "index": "not_analyzed"
+            },
+            "@timestamp":{
+              "type":"date",
+              "format":"epoch_millis"
+            }
+          }
+        },
+        "timer":{
+          "properties":{
+            "@name":{
+              "type": "string",
+                "index": "not_analyzed"
+            },
+            "@timestamp":{
+              "type":"date",
+              "format":"epoch_millis"
+            }
+          }
+        },
+        "meter":{
+          "properties":{
+            "@name":{
+              "type": "string",
+                "index": "not_analyzed"
+            },
+            "@timestamp":{
+              "type":"date",
+              "format":"epoch_millis"
+            }
+          }
+        },
+        "histogram":{
+          "properties":{
+            "@name":{
+              "type": "string",
+                "index": "not_analyzed"
+            },
+            "@timestamp":{
+              "type":"date",
+              "format":"epoch_millis"
+            }
+          }
+        },
+        "counter":{
+          "properties":{
+            "@name":{
+              "type": "string",
+              "index": "not_analyzed"
+            },
+            "@timestamp":{
+              "type":"date",
+              "format":"epoch_millis"
+            }
+          }
+        },
+        "gauge":{
+          "properties":{
+            "@name":{
+              "type": "string",
+                "index": "not_analyzed"
+            },
+            "@timestamp":{
+              "type":"date",
+              "format":"epoch_millis"
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "shared": 
+  {
+    "lb-context":"http://10.60.155.108:8888",
+    "elastic-servers": 
+    [
+      "http://10.60.155.108:9200",
+      "http://10.60.155.108:9200"
+    ],
+
+    "alert": 
+    {
+      "repository": 
+      {
+        "mode": "dev",
+        "timeout": 10000,
+        "schema": 
+        {
+          "template": "issue-*",
+          "mappings": 
+          {
+            "issue": 
+            {          
+              "properties": 
+              {
+                "time":
+                {
+                  "type": "date"
+                }            
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "report-senders":{
+      "sms":{
+      }
+    }    
+  }
+}

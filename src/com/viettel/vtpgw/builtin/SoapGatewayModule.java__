@@ -1,0 +1,30 @@
+package com.viettel.vtpgw.builtin;
+
+import com.viettel.vtpgw.context.RequestContext;
+import com.viettel.vtpgw.module.AbstractModule;
+import com.viettel.vtpgw.repository.RepositoryFactory;
+import com.viettel.vtpgw.repository.impl.DefaultRepositoryFactory;
+
+import io.vertx.core.Future;
+import io.vertx.core.buffer.Buffer;
+
+/**
+ * Created by dinhnn on 5/15/16.
+ */
+public class SoapGatewayModule extends AbstractModule {
+  RepositoryFactory repository;
+  @Override
+  protected void call(RequestContext req, Buffer body) {
+  }
+
+  @Override
+  public String name() {
+    return "ClusterSoapGateway";
+  }
+
+  @Override
+  public void start(Future future) throws Exception {
+    super.start(future);
+    DefaultRepositoryFactory.get(vertx);
+  }
+}

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+	<Appenders>
+		<!-- <File name="file" fileName="app.log"> <PatternLayout> <Pattern>%d 
+			%p %c{1.} [%t] %m %ex%n</Pattern> </PatternLayout> </File> -->
+		<Console name="STDOUT" target="SYSTEM_OUT">
+			<PatternLayout pattern="%m%n" />
+		</Console>
+		<RollingRandomAccessFile name="console" fileName="/u02/gateway/TungPA/vtpgw/logs/console.log"
+                 filePattern="/u02/gateway/TungPA/vtpgw/logs/console-%d{yyyy-MM-dd}-%i.log.gz">
+			<PatternLayout>
+				<Pattern>%d %p %c{1.} [%t] %m %ex%n</Pattern>
+			</PatternLayout>
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="100 MB"/>
+			</Policies>
+			<DefaultRolloverStrategy max="500"/>
+		</RollingRandomAccessFile>
+		<RollingRandomAccessFile name="gateway" fileName="/u02/gateway/TungPA/vtpgw/logs/gateway.log"
+                 filePattern="/u02/gateway/TungPA/vtpgw/logs/gateway-%d{yyyy-MM-dd}-%i.log.gz">
+			<PatternLayout>
+				<Pattern>%m%n</Pattern>
+			</PatternLayout>
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="100 MB"/>
+			</Policies>
+			<DefaultRolloverStrategy max="500"/>
+		</RollingRandomAccessFile>
+		
+		<RollingRandomAccessFile name="io" fileName="/u02/gateway/TungPA/vtpgw/logs/io.log"
+                 filePattern="/u02/gateway/TungPA/vtpgw/logs/gateway-%d{yyyy-MM-dd}-%i.log.gz">
+			<PatternLayout>
+				<Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5p [%t] %m%n</Pattern>
+			</PatternLayout>
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="100 MB"/>
+			</Policies>
+			<DefaultRolloverStrategy max="500"/>
+		</RollingRandomAccessFile>
+		
+		<RollingRandomAccessFile name="qd168" fileName="/u02/gateway/TungPA/vtpgw/logs/qd168.log"
+                 filePattern="/u02/gateway/TungPA/vtpgw/logs/qd168-%d{yyyy-MM-dd}-%i.log.gz">
+			<PatternLayout>
+				<Pattern>%m%n</Pattern>
+			</PatternLayout>
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+				<SizeBasedTriggeringPolicy size="100 MB"/>
+			</Policies>
+			<DefaultRolloverStrategy max="500"/>
+		</RollingRandomAccessFile>		
+	</Appenders>
+	<Loggers>
+		<AsyncRoot level="INFO">
+			<!-- <AppenderRef ref="console" /> -->
+			<AppenderRef ref="STDOUT" />
+		</AsyncRoot>		
+		<AsyncLogger name="InputOutput" level="INFO" additivity="false">
+			<AppenderRef ref="io" />
+		</AsyncLogger>
+		<AsyncLogger name="Gateway-Out" level="INFO" additivity="false">
+			<AppenderRef ref="gateway" />
+		</AsyncLogger>
+		<AsyncLogger name="QD168-Login" level="OFF" additivity="false">
+			<AppenderRef ref="qd168" />
+		</AsyncLogger>
+		<AsyncLogger name="QD168-Logout" level="OFF" additivity="false">
+			<AppenderRef ref="qd168" />
+		</AsyncLogger>
+		<AsyncLogger name="QD168-Error" level="OFF" additivity="false">
+			<AppenderRef ref="qd168" />
+		</AsyncLogger>
+		<AsyncLogger name="QD168-StartAction" level="OFF" additivity="false">
+			<AppenderRef ref="qd168" />
+		</AsyncLogger>
+		<AsyncLogger name="QD168-EndAction" level="INFO" additivity="false">
+			<AppenderRef ref="qd168" />
+		</AsyncLogger>
+		<AsyncLogger name="QD168-StartConnect" level="INFO" additivity="false">
+			<AppenderRef ref="qd168" />
+		</AsyncLogger>
+		<AsyncLogger name="QD168-EndConnect" level="INFO" additivity="false">
+			<AppenderRef ref="qd168" />
+		</AsyncLogger>		
+	</Loggers>
+</Configuration>

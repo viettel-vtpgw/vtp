@@ -1,0 +1,56 @@
+package com.viettel.vtpgw.monitor.http;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import com.viettel.vtpgw.model.impl.DefaultHttpService;
+import com.viettel.vtpgw.monitor.EndpointMonitor;
+
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpMethod;
+import io.vertx.core.json.JsonObject;
+
+public class HttpEndpointMonitor extends EndpointMonitor<DefaultHttpService> {
+	private static final Logger LOG = LogManager.getLogger(HttpEndpointMonitor.class);
+
+	HttpClient httpClient;
+	HttpClient httpsClient;
+	@Override
+	protected void check(DefaultHttpService service, SimpleEndpoint endpoint) {
+		HttpClientRequest req = (endpoint.ssl()?httpsClient:httpClient).requestAbs(HttpMethod.GET, endpoint.url(), resp -> {
+			boolean ok = resp.statusCode() == 200;
+			if (update(service, endpoint, ok) && !ok) {
+				LOG.info("Fail to check {}:{}", endpoint.url(), resp.statusCode());
+			}
+		}).exceptionHandler(th -> {
+			if (update(service, endpoint, false)) {
+				LOG.info("Fail to check {}", endpoint.url(), th);
+			}
+		});
+		if(service.timeout()>0){
+			req.setTimeout(service.timeout());
+		}
+		req.end();
+	}
+
+	@Override
+	protected DefaultHttpService createService(JsonObject obj) {
+		DefaultHttpService rs = new DefaultHttpService();
+		return rs;
+	}
+
+	@Override
+	protected String getProtocol() {
+		return "http";
+	}
+
+	@Override
+	public void start() throws Exception {
+		HttpClientOptions opts = new HttpClientOptions().setTrustAll(true).setConnectTimeout(10000).setIdleTimeout(30000);
+		httpClient = vertx.createHttpClient(opts);
+		httpsClient = vertx.createHttpClient(new HttpClientOptions(opts).setSsl(true).setTrustAll(true).setVerifyHost(false));
+		super.start();
+	}
+}
